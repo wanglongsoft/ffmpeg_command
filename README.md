@@ -74,3 +74,17 @@ ffmpeg -i input.mp4 -vf crop=iw/2:ih/2:10:130 -c:v libx264 -c:a copy output.mp4
 //从坐标(10, 130)开始裁剪大小为：原视频宽度 * 1000(固定值：1000) 的视频
 ffmpeg -i input.mp4 -vf crop=iw:1000:10:130 -c:v libx264 -c:a copy output.mp4
 ```
+#### 6. 倍速播放
+```java
+//视频倍速播放：
+//视频滤波器通过改变每一个 pts时间戳
+ffmpeg -i input.mp4 -filter:v "setpts=0.5*PTS" output.mp4
+ffmpeg -i input.mp4 -filter:v "setpts=2.0*PTS" output.mp4
+//音频倍速播放
+ffmpeg -i input.mp4 -filter:"atempo = 2.0" -vn output.mp4
+//atempo filter 配置区间在0.5和2.0之间，如果需要更高倍，可以使用多个 atempo filter 串在一起来实现，下面是实现4倍的参考
+ffmpeg -i input.mp4 -filter:"atempo=2.0,atempo=2.0" -vn output.mp4
+//音视频同步倍速
+ffmpeg -i input.mp4 -filter_complex "[0:v]setpts=0.5*PTS[v];[0:a]atempo=2.0[a]" -map "[v]" -map "[a]" output.mp4
+//-filter_complex 复杂滤镜，[0:v]表示第一个（文件索引号是0）文件的视频作为输入。setpts=0.5PTS表示每帧视频的pts时间戳都乘0.5 ，也就是差少一半
+```
