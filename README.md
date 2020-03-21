@@ -88,3 +88,48 @@ ffmpeg -i input.mp4 -filter:"atempo=2.0,atempo=2.0" -vn output.mp4
 ffmpeg -i input.mp4 -filter_complex "[0:v]setpts=0.5*PTS[v];[0:a]atempo=2.0[a]" -map "[v]" -map "[a]" output.mp4
 //-filter_complex 复杂滤镜，[0:v]表示第一个（文件索引号是0）文件的视频作为输入。setpts=0.5PTS表示每帧视频的pts时间戳都乘0.5 ，也就是差少一半
 ```
+#### 7. 对称视频
+```java
+//水平方向
+ffmpeg -i input.mp4 -filter_complex "[0:v]pad=w=2*iw[a];[0:v]hflip[b];[a][b]overlay=x=w" duicheng.mp4
+//垂直方向
+ffmpeg -i input.mp4 -filter_complex "[0:v]pad=w=2*iw[a];[0:v]vflip[b];[a][b]overlay=x=w" duicheng.mp4
+```
+#### 8. 画中画
+```java
+ffmpeg -i input.mp4 -i input1.mp4 -filter_complex "[1:v]scale=w=176:h=144:force_original_aspect_ratio=decrease[ckout];[0:v][ckout]overlay=x=W-w-10:y=0[out]" -map "[out]" -movflags faststart new.mp4
+ffmpeg -i input.mp4 -i input1.mp4 -filter_complex "[1]scale=iw/2:ih/2[pip];[0][pip]overlay=main_w-overlay_w-10:main_h-overlay_h-10" new.mp4
+// main_w 为 [0] 宽度 main_h 为 [0] 高度 overlay_w 为 [pip] 宽度 overlay_h 为 [pip] 高度
+//[0] 表示第一个源（-i） [1] 表示第二个源（-i）
+//[1]scale=iw/2:ih/2[pip] 缩放视频源[1]为源宽（iw）二分之一，高（ih）二分之一，得到的结果为[pip]
+//main_w-overlay_w-10，main_h-overlay_h-10是子画处于父画面的位置
+ffmpeg -i input.mp4 -i input1.mp4 -filter_complex "[1]scale=iw/2:ih/2[pip];[0][pip]overlay=(main_w-overlay_w)/2:(main_h-overlay_h)/2" new.mp4
+//子画面居中
+````
+#### 9. 多路视频拼接
+```java
+ffmpeg -f avfoundation -i "1" -framerate 30 -f avfoundation -i "0:0" -r 30 -c:v libx264 -preset ultrafast -c:a aac -profile:a aac_he_v2 -ar 44100 -ac 2 -filter_complex "[0:v]scale=1280:720[a];[a]pad=2560:720[b];[b][1:v]overlay=1440:0[out]" -map "[out]" -movflags faststart -map 1:a out.mp4
+//mac 桌面截屏和摄像头视频合为一路视频，pad用作边界扩充
+ffmpeg -f concat -i test.txt -c copy output.mp4
+//test.txt文件内容：file 'input.mp4'换行file 'input1.mp4'
+```
+#### 10. 视频图片互转
+```java
+\\视频转JPEG
+ffmpeg -i input.mp4 -r 1 -f image2 image-%3d.jpeg
+\\视频转gif
+ffmpeg -i input.mp4 -ss 00:00:00 -t 10 out.gif
+\\图片转视频
+ffmpeg -f image2 -i image-%3d.jpeg images.mp4
+```
+#### 11. 直播相关
+```java
+//推流： 
+ffmpeg -re -i out.mp4 -c copy -f flv rtmp://server/live/streamName
+//拉流保存：
+ffmpeg -i rtmp://58.200.131.2:1935/livetv/hunantv -c copy dump.mp4
+//转流：
+ffmpeg -i rtmp://server/live/originalStream -c:a copy -c:v copy -f flv rtmp://server/live/h264Stream
+//实时推流：
+ffmpeg -framerate 15 -f avfoundation -i “1” -s 1280x720 -c:v libx264 -f flv rtmp://localhost:1935/live/room
+```
